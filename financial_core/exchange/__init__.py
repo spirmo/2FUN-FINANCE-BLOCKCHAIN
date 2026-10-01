@@ -26,3 +26,5 @@ __all__ = [
     "requires_price",
     "requires_stop_price",
     ]
+
+from financial_core.exchange.trade import Trade
