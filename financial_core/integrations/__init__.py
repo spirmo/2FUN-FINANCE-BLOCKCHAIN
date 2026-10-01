@@ -1,0 +1,1 @@
+"""Financial Core integration boundaries."""

@@ -1,0 +1,1 @@
+"""Accounting persistence boundary."""
