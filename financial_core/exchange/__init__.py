@@ -8,6 +8,7 @@ from financial_core.exchange.contracts import (
 from financial_core.exchange.executor import ExchangeExecutor
 from financial_core.exchange.market import Market
 from financial_core.exchange.order import Order
+from financial_core.exchange.order_types import OrderType, TimeInForce
 from financial_core.exchange.validator import ExchangeValidator
 
 __all__ = [
@@ -18,4 +19,8 @@ __all__ = [
     "ExchangeValidator",
     "Market",
     "Order",
-]
+    "OrderType",
+    "TimeInForce",
+    "requires_price",
+    "requires_stop_price",
+    ]
