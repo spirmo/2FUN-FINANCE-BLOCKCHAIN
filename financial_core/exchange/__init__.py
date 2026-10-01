@@ -1,5 +1,6 @@
 """Financial exchange domain."""
 
+from financial_core.exchange.order_book import OrderBook
 from financial_core.exchange.contracts import (
     ExchangeDecision,
     ExchangeRequest,
