@@ -6,6 +6,7 @@ from financial_core.exchange.contracts import (
     ExchangeResult,
 )
 from financial_core.exchange.executor import ExchangeExecutor
+from financial_core.exchange.market import Market
 from financial_core.exchange.validator import ExchangeValidator
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "ExchangeResult",
     "ExchangeExecutor",
     "ExchangeValidator",
+    "Market",
 ]
