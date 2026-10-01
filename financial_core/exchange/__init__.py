@@ -1,3 +1,4 @@
+from financial_core.exchange.matching import MatchResult, MatchingEngine
 """Financial exchange domain."""
 
 from financial_core.exchange.order_book import OrderBook
