@@ -28,3 +28,5 @@ __all__ = [
     ]
 
 from financial_core.exchange.trade import Trade
+
+from financial_core.exchange.fee import FeeCalculator, FeeResult
