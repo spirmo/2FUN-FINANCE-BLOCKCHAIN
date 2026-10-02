@@ -3,8 +3,10 @@
 from decimal import Decimal
 
 from financial_core.contracts.transfer import TransferRequest
+from financial_core.contracts.integrity import IntegrityRequest
 from financial_core.contracts.transfer_execution import TransferExecutionResult
 from financial_core.idempotency.memory_store import InMemoryIdempotencyStore
+from financial_core.integrations.integrity_adapter import UniversalIntegrityAdapter
 from financial_core.idempotency.store import IdempotencyStore
 from financial_core.operations.transfer_validator import TransferValidator
 from platform_core.universal_value.core.contracts import ValueEvent
@@ -21,6 +23,7 @@ class TransferExecutor:
         self,
         ledger: ValueLedger,
         idempotency_store: IdempotencyStore | None = None,
+        integrity_provider: UniversalIntegrityAdapter | None = None,
     ):
         self._ledger = ledger
         self._transaction_manager = TransactionManager(ledger)
@@ -29,6 +32,11 @@ class TransferExecutor:
             idempotency_store
             if idempotency_store is not None
             else InMemoryIdempotencyStore()
+        )
+        self._integrity_provider = (
+            integrity_provider
+            if integrity_provider is not None
+            else UniversalIntegrityAdapter()
         )
 
     def execute(
@@ -124,6 +132,28 @@ class TransferExecutor:
             )
             raise
 
+        integrity = self._integrity_provider.generate(
+            IntegrityRequest(
+                operation_id=request.operation_id,
+                operation_type="TRANSFER",
+                source="FINANCIAL_CORE",
+                actor=request.source_account_id,
+                origin="TRANSFER_EXECUTOR",
+                target=request.destination_account_id,
+                payload={
+                    "transfer_id": transfer_id,
+                    "source_account_id": request.source_account_id,
+                    "destination_account_id": request.destination_account_id,
+                    "amount": request.amount,
+                    "unit": request.unit,
+                    "source_uvi_transaction_id": source_transaction.transaction_id,
+                    "destination_uvi_transaction_id": destination_transaction.transaction_id,
+                },
+                value=request.amount,
+                previous_hash="GENESIS",
+            )
+        )
+
         result = TransferExecutionResult(
             operation_id=request.operation_id,
             transfer_id=transfer_id,
@@ -134,9 +164,11 @@ class TransferExecutor:
             status="EXECUTED",
             source_uvi_transaction_id=source_transaction.transaction_id,
             destination_uvi_transaction_id=destination_transaction.transaction_id,
+            financial_transaction_hash=integrity.hash_value,
             metadata={
-                "authority": "EXISTING_UVI",
+                "authority": "UNIVERSAL_INTEGRITY_LAYER",
                 "execution": "UVI_DEBIT_CREDIT",
+                "integrity_version": integrity.integrity_version,
             },
         )
 
