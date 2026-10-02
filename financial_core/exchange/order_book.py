@@ -38,6 +38,17 @@ class OrderBook:
         else:
             self.asks.append(order)
 
+    def cancel_order(self, order_id: str) -> Order:
+        """Cancel a resting order and remove it from the book."""
+        for orders in (self.bids, self.asks):
+            for index, order in enumerate(orders):
+                if order.order_id == order_id:
+                    cancelled = order.with_status("CANCELLED")
+                    del orders[index]
+                    return cancelled
+
+        raise ValueError("order not found in order book")
+
     def sorted_bids(self) -> list[Order]:
         """Return BUY orders using price-time priority."""
 

@@ -41,6 +41,37 @@ class TestOrderBook(unittest.TestCase):
         self.assertEqual(book.asks, [order])
         self.assertEqual(book.bids, [])
 
+
+    def test_cancel_buy_order_removes_it_from_book(self):
+        book = OrderBook("2FUNC-USD")
+        order = self.make_order("BUY-CANCEL", side="BUY")
+
+        book.add_order(order)
+        cancelled = book.cancel_order("BUY-CANCEL")
+
+        self.assertEqual(cancelled.status, "CANCELLED")
+        self.assertEqual(cancelled.order_id, "BUY-CANCEL")
+        self.assertEqual(order.status, "OPEN")
+        self.assertEqual(book.bids, [])
+        self.assertIsNone(book.best_bid())
+
+    def test_cancel_sell_order_removes_it_from_book(self):
+        book = OrderBook("2FUNC-USD")
+        order = self.make_order("SELL-CANCEL", side="SELL")
+
+        book.add_order(order)
+        cancelled = book.cancel_order("SELL-CANCEL")
+
+        self.assertEqual(cancelled.status, "CANCELLED")
+        self.assertEqual(book.asks, [])
+        self.assertIsNone(book.best_ask())
+
+    def test_cancel_unknown_order_is_rejected(self):
+        book = OrderBook("2FUNC-USD")
+
+        with self.assertRaises(ValueError):
+            book.cancel_order("UNKNOWN")
+
     def test_rejects_order_from_different_market(self):
         book = OrderBook("2FUNC-USD")
         order = self.make_order(
