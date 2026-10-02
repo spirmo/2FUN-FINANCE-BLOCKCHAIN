@@ -21,6 +21,14 @@ ORDER_STATUSES = {
     "REJECTED",
 }
 
+ORDER_STATUS_TRANSITIONS = {
+    "OPEN": {"PARTIALLY_FILLED", "FILLED", "CANCELLED"},
+    "PARTIALLY_FILLED": {"PARTIALLY_FILLED", "FILLED", "CANCELLED"},
+    "FILLED": set(),
+    "CANCELLED": set(),
+    "REJECTED": set(),
+}
+
 
 @dataclass(frozen=True)
 class Order:
@@ -37,6 +45,31 @@ class Order:
     time_in_force: str = "GTC"
     status: str = "OPEN"
     metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def with_status(self, new_status: str) -> "Order":
+        """Return a new order with a validated lifecycle status."""
+        if new_status not in ORDER_STATUSES:
+            raise ValueError("invalid order status")
+
+        allowed = ORDER_STATUS_TRANSITIONS[self.status]
+        if new_status not in allowed:
+            raise ValueError(
+                f"invalid order status transition: {self.status} -> {new_status}"
+            )
+
+        return Order(
+            order_id=self.order_id,
+            market_id=self.market_id,
+            account_id=self.account_id,
+            side=self.side,
+            order_type=self.order_type,
+            quantity=self.quantity,
+            price=self.price,
+            stop_price=self.stop_price,
+            time_in_force=self.time_in_force,
+            status=new_status,
+            metadata=self.metadata,
+        )
 
     def __post_init__(self) -> None:
         if not self.order_id:

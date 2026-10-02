@@ -69,6 +69,55 @@ class TestOrder(unittest.TestCase):
                 price="0",
             )
 
+
+    def test_allows_valid_status_transitions(self):
+        order = Order(
+            order_id="ORD-007",
+            market_id="2FUNC-USD",
+            account_id="ACC-007",
+            side="BUY",
+            order_type="LIMIT",
+            quantity="10",
+            price="25",
+        )
+
+        partial = order.with_status("PARTIALLY_FILLED")
+        filled = partial.with_status("FILLED")
+
+        self.assertEqual(order.status, "OPEN")
+        self.assertEqual(partial.status, "PARTIALLY_FILLED")
+        self.assertEqual(filled.status, "FILLED")
+
+    def test_rejects_invalid_status_transition(self):
+        order = Order(
+            order_id="ORD-008",
+            market_id="2FUNC-USD",
+            account_id="ACC-008",
+            side="BUY",
+            order_type="LIMIT",
+            quantity="10",
+            price="25",
+        )
+
+        with self.assertRaises(ValueError):
+            order.with_status("CANCELLED").with_status("FILLED")
+
+    def test_rejects_invalid_status_transition_from_terminal_state(self):
+        order = Order(
+            order_id="ORD-009",
+            market_id="2FUNC-USD",
+            account_id="ACC-009",
+            side="BUY",
+            order_type="LIMIT",
+            quantity="10",
+            price="25",
+        )
+
+        filled = order.with_status("FILLED")
+
+        with self.assertRaises(ValueError):
+            filled.with_status("OPEN")
+
     def test_rejects_invalid_status(self):
         with self.assertRaises(ValueError):
             Order(
