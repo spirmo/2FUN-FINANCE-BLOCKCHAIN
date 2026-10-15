@@ -10,7 +10,10 @@ from financial_core.blockchain.native_ledger import (
 from financial_core.blockchain.persistent_native_ledger import (
     SQLiteNativeLedger,
 )
-from financial_core.blockchain.twofunc_supply import BASE_UNITS_PER_2FUNC
+from financial_core.twofunc.supply import (
+    BASE_UNITS_PER_2FUNC,
+    BASE_UNITS_PER_DRIKA,
+)
 
 
 class PersistentNativeLedgerTests(unittest.TestCase):
@@ -59,8 +62,14 @@ class PersistentNativeLedgerTests(unittest.TestCase):
             price_per_resource_unit_drika=0,
             max_fee_drika=10,
         )
-        quote = policy.quote("TRANSFER", 0)
-        ledger = SQLiteNativeLedger(self.db_path, {"alice": 1000, "bob": 0})
+        quote = policy.quote(
+            operation_type="TRANSFER",
+            resource_units=0,
+        )
+        initial_balance = BASE_UNITS_PER_DRIKA + 1000
+        ledger = SQLiteNativeLedger(
+            self.db_path, {"alice": initial_balance, "bob": 0}
+        )
         ledger.transfer_with_fee(
             Transfer("TX-FEE", "alice", "bob", 100),
             fee_quote=quote,
@@ -74,7 +83,7 @@ class PersistentNativeLedgerTests(unittest.TestCase):
             self.assertIsNotNone(payment)
             self.assertEqual(payment.payer, "alice")
             self.assertEqual(payment.fee_recipient, "treasury")
-            self.assertEqual(reopened.total_balances, 1000)
+            self.assertEqual(reopened.total_balances, initial_balance)
         finally:
             reopened.close()
 

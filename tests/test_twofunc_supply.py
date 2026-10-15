@@ -1,6 +1,6 @@
 import unittest
 
-from financial_core.blockchain.twofunc_supply import (
+from financial_core.twofunc.supply import (
     BASE_UNITS_PER_2FUNC,
     BASE_UNITS_PER_DRIKA,
     COIN_DECIMALS,

@@ -7,25 +7,25 @@ from contextlib import closing
 from datetime import date
 from pathlib import Path
 
-from financial_core.blockchain.native_ledger import (
+from financial_core.interfaces.native_ledger import (
     DuplicateTransaction,
 )
 from financial_core.blockchain.persistent_native_ledger import (
     SQLiteNativeLedger,
 )
-from financial_core.blockchain.twofunc_issuance_coordinator import (
+from financial_core.twofunc.issuance_coordinator import (
     IssuanceCoordinatorError,
     TwoFuncIssuanceCoordinator,
 )
-from financial_core.blockchain.twofunc_release_schedule import (
+from financial_core.twofunc.release_schedule import (
     ReleaseStage,
     TwoFuncReleaseSchedule,
 )
-from financial_core.blockchain.twofunc_release_state import (
+from financial_core.twofunc.release_state import (
     ReleaseStateError,
     TwoFuncReleaseState,
 )
-from financial_core.blockchain.twofunc_supply import (
+from financial_core.twofunc.supply import (
     MAX_SUPPLY,
     BASE_UNITS_PER_2FUNC,
 )

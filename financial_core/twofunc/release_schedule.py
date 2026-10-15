@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
-from .twofunc_supply import MAX_SUPPLY
+from .supply import MAX_SUPPLY
 
 
 STAGE_COUNT = 10

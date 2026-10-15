@@ -13,7 +13,7 @@ from financial_core.blockchain.native_ledger import (
 from financial_core.blockchain.persistent_native_ledger import (
     SQLiteNativeLedger,
 )
-from financial_core.blockchain.twofunc_supply import (
+from financial_core.twofunc.supply import (
     drika_to_base_units,
 )
 

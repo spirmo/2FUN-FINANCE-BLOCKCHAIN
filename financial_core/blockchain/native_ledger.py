@@ -3,22 +3,19 @@
 from dataclasses import dataclass
 
 from financial_core.blockchain.fee_policy import FeeQuote
-from financial_core.blockchain.twofunc_supply import (
+from financial_core.interfaces.native_ledger import (
+    DuplicateTransaction,
+    Issuance,
+    LedgerError,
+)
+from financial_core.twofunc.supply import (
     MAX_SUPPLY_BASE_UNITS,
     drika_to_base_units,
 )
 
 
-class LedgerError(ValueError):
-    """Base exception for native-ledger failures."""
-
-
 class InsufficientBalance(LedgerError):
     """The sender does not have enough available balance."""
-
-
-class DuplicateTransaction(LedgerError):
-    """A transaction identifier has already been used."""
 
 
 @dataclass(frozen=True)
@@ -45,15 +42,6 @@ class Transfer:
             recipient=recipient,
             amount=drika_to_base_units(amount_drika),
         )
-
-
-@dataclass(frozen=True)
-class Issuance:
-    """Auditable record of a successful native 2FUNC issuance."""
-
-    tx_id: str
-    recipient: str
-    amount: int
 
 
 @dataclass(frozen=True)

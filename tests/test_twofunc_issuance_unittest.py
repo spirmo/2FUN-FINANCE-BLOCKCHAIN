@@ -1,11 +1,11 @@
 import unittest
 
-from financial_core.blockchain.native_ledger import (
+from financial_core.interfaces.native_ledger import (
     DuplicateTransaction,
     LedgerError,
-    NativeLedger,
 )
-from financial_core.blockchain.twofunc_supply import (
+from financial_core.blockchain.native_ledger import NativeLedger
+from financial_core.twofunc.supply import (
     BASE_UNITS_PER_2FUNC,
     MAX_SUPPLY_BASE_UNITS,
 )

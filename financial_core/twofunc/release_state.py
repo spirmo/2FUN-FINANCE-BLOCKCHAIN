@@ -6,12 +6,12 @@ from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from financial_core.blockchain.twofunc_release_schedule import (
+from financial_core.twofunc.release_schedule import (
     ReleaseScheduleError,
     TwoFuncReleaseSchedule,
     STAGE_COUNT,
 )
-from financial_core.blockchain.twofunc_supply import MAX_SUPPLY_BASE_UNITS, BASE_UNITS_PER_2FUNC
+from financial_core.twofunc.supply import MAX_SUPPLY_BASE_UNITS, BASE_UNITS_PER_2FUNC
 
 
 MIN_ISSUED_PERCENT = 90

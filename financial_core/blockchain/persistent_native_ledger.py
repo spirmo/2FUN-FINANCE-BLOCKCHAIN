@@ -216,7 +216,7 @@ class SQLiteNativeLedger(NativeLedger):
                 )
 
     def _load_state(self):
-        from financial_core.blockchain.twofunc_supply import (
+        from financial_core.twofunc.supply import (
             MAX_SUPPLY_BASE_UNITS,
         )
 

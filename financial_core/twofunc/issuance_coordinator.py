@@ -7,19 +7,20 @@ supports recovery when the process stops between those two writes.
 
 from datetime import date
 
-from financial_core.blockchain.native_ledger import (
+from financial_core.interfaces.native_ledger import (
     DuplicateTransaction,
     Issuance,
     LedgerError,
+    NativeLedgerPort,
 )
-from financial_core.blockchain.twofunc_release_schedule import (
+from financial_core.twofunc.release_schedule import (
     TwoFuncReleaseSchedule,
 )
-from financial_core.blockchain.twofunc_release_state import (
+from financial_core.twofunc.release_state import (
     ReleaseStateError,
     TwoFuncReleaseState,
 )
-from financial_core.blockchain.twofunc_supply import (
+from financial_core.twofunc.supply import (
     BASE_UNITS_PER_2FUNC,
 )
 
@@ -38,7 +39,7 @@ class TwoFuncIssuanceCoordinator:
 
     def __init__(
         self,
-        ledger,
+        ledger: NativeLedgerPort,
         release_state: TwoFuncReleaseState,
         schedule: TwoFuncReleaseSchedule,
     ):

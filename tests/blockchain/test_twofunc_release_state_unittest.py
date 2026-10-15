@@ -5,15 +5,15 @@ from pathlib import Path
 import sqlite3
 from contextlib import closing
 
-from financial_core.blockchain.twofunc_release_schedule import (
+from financial_core.twofunc.release_schedule import (
     ReleaseStage,
     TwoFuncReleaseSchedule,
 )
-from financial_core.blockchain.twofunc_release_state import (
+from financial_core.twofunc.release_state import (
     ReleaseStateError,
     TwoFuncReleaseState,
 )
-from financial_core.blockchain.twofunc_supply import (
+from financial_core.twofunc.supply import (
     MAX_SUPPLY,
     MAX_SUPPLY_BASE_UNITS,
     BASE_UNITS_PER_2FUNC,

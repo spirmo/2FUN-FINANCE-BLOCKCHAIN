@@ -8,7 +8,7 @@ from financial_core.blockchain.native_ledger import (
     NativeLedger,
     Transfer,
 )
-from financial_core.blockchain.twofunc_supply import (
+from financial_core.twofunc.supply import (
     BASE_UNITS_PER_2FUNC,
     BASE_UNITS_PER_DRIKA,
     MAX_SUPPLY_BASE_UNITS,

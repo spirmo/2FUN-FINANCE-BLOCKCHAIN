@@ -1,8 +1,8 @@
 import unittest
 from datetime import date
 
-from financial_core.blockchain.twofunc_supply import MAX_SUPPLY
-from financial_core.blockchain.twofunc_release_schedule import (
+from financial_core.twofunc.supply import MAX_SUPPLY
+from financial_core.twofunc.release_schedule import (
     ReleaseStage,
     ReleaseScheduleError,
     TwoFuncReleaseSchedule,
@@ -117,7 +117,7 @@ class TwoFuncReleaseScheduleTests(unittest.TestCase):
 
 
     def test_approved_geometric_allocation_matches_locked_amounts(self):
-        from financial_core.blockchain.twofunc_release_schedule import (
+        from financial_core.twofunc.release_schedule import (
             calculate_approved_geometric_stage_amounts,
         )
 
