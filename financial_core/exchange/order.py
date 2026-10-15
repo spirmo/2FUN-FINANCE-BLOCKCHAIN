@@ -71,6 +71,37 @@ class Order:
             metadata=self.metadata,
         )
 
+    def with_fill(self, filled_quantity: str) -> "Order":
+        """Return a new order after applying a filled quantity."""
+        try:
+            filled = Decimal(str(filled_quantity))
+            remaining = Decimal(str(self.quantity))
+        except (InvalidOperation, ValueError):
+            raise ValueError("filled quantity must be a valid decimal")
+
+        if filled <= 0:
+            raise ValueError("filled quantity must be greater than zero")
+
+        if filled > remaining:
+            raise ValueError("filled quantity cannot exceed order quantity")
+
+        new_quantity = remaining - filled
+        new_status = "FILLED" if new_quantity == 0 else "PARTIALLY_FILLED"
+
+        return Order(
+            order_id=self.order_id,
+            market_id=self.market_id,
+            account_id=self.account_id,
+            side=self.side,
+            order_type=self.order_type,
+            quantity=str(new_quantity),
+            price=self.price,
+            stop_price=self.stop_price,
+            time_in_force=self.time_in_force,
+            status=new_status,
+            metadata=self.metadata,
+        )
+
     def __post_init__(self) -> None:
         if not self.order_id:
             raise ValueError("order_id is required")
@@ -99,8 +130,10 @@ class Order:
         except (InvalidOperation, ValueError):
             raise ValueError("quantity must be a valid decimal")
 
-        if quantity <= 0:
-            raise ValueError("quantity must be greater than zero")
+        if quantity < 0 or (quantity == 0 and self.status != "FILLED"):
+            raise ValueError(
+                "quantity must be greater than zero unless order is FILLED"
+            )
 
         if requires_price(order_type) and self.price is None:
             raise ValueError("this order type requires a price")

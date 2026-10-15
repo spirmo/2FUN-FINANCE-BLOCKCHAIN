@@ -1,5 +1,6 @@
 """Exchange order book domain."""
 
+from decimal import Decimal
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -68,11 +69,19 @@ class OrderBook:
     def best_bid(self) -> Order | None:
         """Return the highest-priority BUY order."""
 
-        bids = self.sorted_bids()
+        bids = [
+            order for order in self.sorted_bids()
+            if order.status in {"OPEN", "PARTIALLY_FILLED"}
+            and Decimal(str(order.quantity)) > 0
+        ]
         return bids[0] if bids else None
 
     def best_ask(self) -> Order | None:
         """Return the highest-priority SELL order."""
 
-        asks = self.sorted_asks()
+        asks = [
+            order for order in self.sorted_asks()
+            if order.status in {"OPEN", "PARTIALLY_FILLED"}
+            and Decimal(str(order.quantity)) > 0
+        ]
         return asks[0] if asks else None

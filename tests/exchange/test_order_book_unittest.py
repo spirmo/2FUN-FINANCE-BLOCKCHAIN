@@ -66,6 +66,30 @@ class TestOrderBook(unittest.TestCase):
         self.assertEqual(book.asks, [])
         self.assertIsNone(book.best_ask())
 
+    def test_filled_buy_order_is_not_selected_as_best_bid(self):
+        book = OrderBook("2FUNC-USD")
+        order = self.make_order("BUY-FILLED", side="BUY")
+        book.add_order(order)
+
+        filled = order.with_fill("1")
+        book.bids[0] = filled
+
+        self.assertEqual(filled.status, "FILLED")
+        self.assertEqual(filled.quantity, "0")
+        self.assertIsNone(book.best_bid())
+
+    def test_filled_sell_order_is_not_selected_as_best_ask(self):
+        book = OrderBook("2FUNC-USD")
+        order = self.make_order("SELL-FILLED", side="SELL")
+        book.add_order(order)
+
+        filled = order.with_fill("1")
+        book.asks[0] = filled
+
+        self.assertEqual(filled.status, "FILLED")
+        self.assertEqual(filled.quantity, "0")
+        self.assertIsNone(book.best_ask())
+
     def test_cancel_unknown_order_is_rejected(self):
         book = OrderBook("2FUNC-USD")
 
