@@ -3,7 +3,7 @@
 import unittest
 
 from financial_core.blockchain.fee_policy import FeePolicy
-from financial_core.blockchain.twofunc_supply import drika_to_base_units
+from financial_core.twofunc.supply import drika_to_base_units
 
 
 class TestFeePolicy(unittest.TestCase):

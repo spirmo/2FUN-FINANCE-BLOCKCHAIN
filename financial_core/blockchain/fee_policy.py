@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping
 
-from financial_core.blockchain.twofunc_supply import drika_to_base_units
+from financial_core.twofunc.supply import drika_to_base_units
 
 
 @dataclass(frozen=True)
