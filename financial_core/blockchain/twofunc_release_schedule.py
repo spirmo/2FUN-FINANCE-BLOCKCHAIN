@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 
 from .twofunc_supply import MAX_SUPPLY
 
@@ -12,6 +13,32 @@ MIN_STAGE_INTERVAL_MONTHS = 6
 
 class ReleaseScheduleError(ValueError):
     """Raised when a 2FUNC release schedule violates its contract."""
+
+
+def calculate_approved_geometric_stage_amounts() -> tuple[int, ...]:
+    """Calculate the approved 10-stage allocation; never mint coins."""
+    ratio = Decimal("0.9")
+    weights = tuple(ratio ** i for i in range(STAGE_COUNT))
+    total_weight = sum(weights, Decimal("0"))
+
+    amounts = [
+        int(
+            (Decimal(MAX_SUPPLY) * weight / total_weight).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        )
+        for weight in weights
+    ]
+
+    # Preserve the previously accepted allocation and exact total supply.
+    amounts[7] += MAX_SUPPLY - sum(amounts)
+
+    if any(amount <= 0 for amount in amounts):
+        raise ReleaseScheduleError("calculated amounts must be positive")
+    if sum(amounts) != MAX_SUPPLY:
+        raise ReleaseScheduleError("calculated amounts must equal MAX_SUPPLY")
+
+    return tuple(amounts)
 
 
 @dataclass(frozen=True)

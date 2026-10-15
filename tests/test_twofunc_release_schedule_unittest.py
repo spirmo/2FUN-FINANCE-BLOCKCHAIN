@@ -116,5 +116,29 @@ class TwoFuncReleaseScheduleTests(unittest.TestCase):
             )
 
 
+    def test_approved_geometric_allocation_matches_locked_amounts(self):
+        from financial_core.blockchain.twofunc_release_schedule import (
+            calculate_approved_geometric_stage_amounts,
+        )
+
+        expected = (
+            2217248421474,
+            1995523579326,
+            1795971221394,
+            1616374099254,
+            1454736689329,
+            1309263020396,
+            1178336718356,
+            1060503046520,
+            954452741869,
+            859007467682,
+        )
+
+        amounts = calculate_approved_geometric_stage_amounts()
+        self.assertEqual(amounts, expected)
+        self.assertEqual(sum(amounts), MAX_SUPPLY)
+
+
+
 if __name__ == "__main__":
     unittest.main()
