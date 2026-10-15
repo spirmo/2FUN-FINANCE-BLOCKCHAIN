@@ -1,7 +1,1 @@
-"""Financial Core blockchain settlement domain."""
-
-from financial_core.blockchain.gateway import BlockchainSettlementGateway
-
-__all__ = [
-    "BlockchainSettlementGateway",
-]
+"""Blockchain primitives for the native 2FUN / 2FUNC network."""
