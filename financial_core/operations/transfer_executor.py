@@ -59,78 +59,14 @@ class TransferExecutor:
 
         amount = Decimal(request.amount)
 
-        source_balance = self._ledger.balance(
-            request.source_account_id,
-            request.unit,
-        )
-
-        if amount > source_balance:
-            raise ValueError("Insufficient UVI balance")
-
-        transfer_id = request.operation_id
-
-        source_transaction = self._transaction_manager.create_transaction(
-            event=ValueEvent(
-                event_id=f"{transfer_id}:debit",
-                user_id=request.source_account_id,
-                source="2FUNC",
-                action="TRANSFER",
-                base_value=amount,
-                currency=request.unit,
-                metadata=dict(request.metadata),
-            ),
+        transfer = self._ledger.execute_transfer(
+            operation_id=request.operation_id,
+            source_user_id=request.source_account_id,
+            destination_user_id=request.destination_account_id,
             amount=amount,
-            transaction_type="DEBIT",
-            metadata={
-                **dict(request.metadata),
-                "transfer_id": transfer_id,
-                "side": "SOURCE",
-            },
+            currency=request.unit,
+            metadata=dict(request.metadata),
         )
-
-        try:
-            destination_transaction = (
-                self._transaction_manager.create_transaction(
-                    event=ValueEvent(
-                        event_id=f"{transfer_id}:credit",
-                        user_id=request.destination_account_id,
-                        source="2FUNC",
-                        action="TRANSFER",
-                        base_value=amount,
-                        currency=request.unit,
-                        metadata=dict(request.metadata),
-                    ),
-                    amount=amount,
-                    transaction_type="CREDIT",
-                    metadata={
-                        **dict(request.metadata),
-                        "transfer_id": transfer_id,
-                        "side": "DESTINATION",
-                    },
-                )
-            )
-
-        except Exception:
-            self._transaction_manager.create_transaction(
-                event=ValueEvent(
-                    event_id=f"{transfer_id}:rollback",
-                    user_id=request.source_account_id,
-                    source="2FUNC",
-                    action="TRANSFER_ROLLBACK",
-                    base_value=amount,
-                    currency=request.unit,
-                    metadata=dict(request.metadata),
-                ),
-                amount=amount,
-                transaction_type="CREDIT",
-                metadata={
-                    **dict(request.metadata),
-                    "transfer_id": transfer_id,
-                    "side": "ROLLBACK",
-                    "reason": "DESTINATION_CREDIT_FAILED",
-                },
-            )
-            raise
 
         integrity = self._integrity_provider.generate(
             IntegrityRequest(
@@ -141,13 +77,13 @@ class TransferExecutor:
                 origin="TRANSFER_EXECUTOR",
                 target=request.destination_account_id,
                 payload={
-                    "transfer_id": transfer_id,
+                    "transfer_id": request.operation_id,
                     "source_account_id": request.source_account_id,
                     "destination_account_id": request.destination_account_id,
                     "amount": request.amount,
                     "unit": request.unit,
-                    "source_uvi_transaction_id": source_transaction.transaction_id,
-                    "destination_uvi_transaction_id": destination_transaction.transaction_id,
+                    "source_uvi_transaction_id": transfer["debit_transaction_id"],
+                    "destination_uvi_transaction_id": transfer["credit_transaction_id"],
                 },
                 value=request.amount,
                 previous_hash="GENESIS",
@@ -156,14 +92,14 @@ class TransferExecutor:
 
         result = TransferExecutionResult(
             operation_id=request.operation_id,
-            transfer_id=transfer_id,
+            transfer_id=request.operation_id,
             source_account_id=request.source_account_id,
             destination_account_id=request.destination_account_id,
             amount=request.amount,
             unit=request.unit,
             status="EXECUTED",
-            source_uvi_transaction_id=source_transaction.transaction_id,
-            destination_uvi_transaction_id=destination_transaction.transaction_id,
+            source_uvi_transaction_id=transfer["debit_transaction_id"],
+            destination_uvi_transaction_id=transfer["credit_transaction_id"],
             financial_transaction_hash=integrity.hash_value,
             metadata={
                 "authority": "UNIVERSAL_INTEGRITY_LAYER",

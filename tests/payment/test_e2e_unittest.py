@@ -1,3 +1,4 @@
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,7 +16,35 @@ from platform_core.universal_value.transactions.transaction_manager import (
 
 class TestPaymentE2E(unittest.TestCase):
     def test_payment_persists_idempotency_and_blocks_second_mutation(self):
-        ledger = ValueLedger()
+        ledger_temp = tempfile.TemporaryDirectory()
+        self.addCleanup(ledger_temp.cleanup)
+        ledger_db_path = Path(ledger_temp.name) / "uvi.sqlite3"
+
+        with sqlite3.connect(ledger_db_path) as connection:
+            connection.executescript("""
+                CREATE TABLE uvi_ledger_entries (
+                    transaction_id TEXT PRIMARY KEY,
+                    event_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    amount TEXT NOT NULL,
+                    currency TEXT NOT NULL,
+                    transaction_type TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    metadata_json TEXT NOT NULL DEFAULT '{}'
+                );
+                CREATE TABLE uvi_transfer_operations (
+                    operation_id TEXT PRIMARY KEY,
+                    source_user_id TEXT NOT NULL,
+                    destination_user_id TEXT NOT NULL,
+                    amount TEXT NOT NULL,
+                    currency TEXT NOT NULL,
+                    debit_transaction_id TEXT NOT NULL UNIQUE,
+                    credit_transaction_id TEXT NOT NULL UNIQUE,
+                    created_at TEXT NOT NULL
+                );
+            """)
+
+        ledger = ValueLedger(db_path=ledger_db_path)
         transaction_manager = TransactionManager(ledger)
 
         transaction_manager.create_transaction(
@@ -25,7 +54,7 @@ class TestPaymentE2E(unittest.TestCase):
                 source="VS004",
                 action="CREDIT",
                 base_value=100,
-                currency="POINT",
+                currency="Drika",
                 metadata={"test": "VS004"},
             ),
             amount=100,
@@ -50,7 +79,7 @@ class TestPaymentE2E(unittest.TestCase):
                 payer_account_id="PAYER-VS004",
                 payee_account_id="PAYEE-VS004",
                 amount="25",
-                unit="POINT",
+                unit="Drika",
                 metadata={"test": "VS004"},
             )
 
@@ -60,19 +89,19 @@ class TestPaymentE2E(unittest.TestCase):
             self.assertEqual(first.payment_id, request.operation_id)
             self.assertEqual(first.transfer_operation_id, request.operation_id)
             self.assertEqual(
-                ledger.balance("PAYER-VS004", "POINT"),
+                ledger.balance("PAYER-VS004", "Drika"),
                 75,
             )
             self.assertEqual(
-                ledger.balance("PAYEE-VS004", "POINT"),
+                ledger.balance("PAYEE-VS004", "Drika"),
                 25,
             )
             self.assertIsNotNone(first.payer_uvi_transaction_id)
             self.assertIsNotNone(first.payee_uvi_transaction_id)
             self.assertIsNotNone(first.financial_transaction_hash)
 
-            first_payer_balance = ledger.balance("PAYER-VS004", "POINT")
-            first_payee_balance = ledger.balance("PAYEE-VS004", "POINT")
+            first_payer_balance = ledger.balance("PAYER-VS004", "Drika")
+            first_payee_balance = ledger.balance("PAYEE-VS004", "Drika")
 
             second = payment_executor.execute(request)
 
@@ -96,11 +125,11 @@ class TestPaymentE2E(unittest.TestCase):
             )
 
             self.assertEqual(
-                ledger.balance("PAYER-VS004", "POINT"),
+                ledger.balance("PAYER-VS004", "Drika"),
                 first_payer_balance,
             )
             self.assertEqual(
-                ledger.balance("PAYEE-VS004", "POINT"),
+                ledger.balance("PAYEE-VS004", "Drika"),
                 first_payee_balance,
             )
 

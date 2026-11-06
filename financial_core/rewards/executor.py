@@ -1,6 +1,8 @@
 """End-to-end price-adjusted reward executor."""
 
+from datetime import date
 from decimal import Decimal
+from financial_core.profiles.daily_profile import DailyProfileStore
 
 from financial_core.contracts.idempotency import IdempotencyRecord
 from financial_core.contracts.integrity import IntegrityRequest
@@ -12,10 +14,7 @@ from financial_core.contracts.uvi import UVIValueRequest
 from financial_core.idempotency.generic_sqlite_store import (
     GenericSQLiteIdempotencyStore,
 )
-from financial_core.integrations.integrity_adapter import (
-    UniversalIntegrityAdapter,
-)
-from financial_core.integrations.uvi_earn_adapter import UVIEarnAdapter
+from financial_core.contracts.uvi import UVIAdapter
 from financial_core.rewards.calculator import PriceAdjustedRewardCalculator
 
 
@@ -30,17 +29,26 @@ class RewardExecutor:
     def __init__(
         self,
         valuation_provider,
-        uvi_adapter: UVIEarnAdapter,
+        uvi_adapter: UVIAdapter,
         idempotency_store: GenericSQLiteIdempotencyStore,
-        integrity_provider: UniversalIntegrityAdapter | None = None,
+        integrity_provider: "UniversalIntegrityAdapter | None" = None,
+        profile_store: DailyProfileStore | None = None,
+        activity_date_provider=None,
     ):
         self._valuation_provider = valuation_provider
         self._uvi_adapter = uvi_adapter
         self._idempotency_store = idempotency_store
-        self._integrity_provider = (
-            integrity_provider or UniversalIntegrityAdapter()
-        )
+        if integrity_provider is None:
+            from financial_core.integrations.integrity_adapter import (
+                UniversalIntegrityAdapter,
+            )
+
+            integrity_provider = UniversalIntegrityAdapter()
+
+        self._integrity_provider = integrity_provider
         self._calculator = PriceAdjustedRewardCalculator()
+        self._profile_store = profile_store
+        self._activity_date_provider = activity_date_provider or date.today
 
     def execute(
         self,
@@ -136,6 +144,19 @@ class RewardExecutor:
                 },
             )
         )
+
+        if self._profile_store is not None:
+            self._profile_store.record_activity(
+                operation_id=request.operation_id,
+                user_id=request.user_id,
+                activity_date=self._activity_date_provider(),
+                base_points=calculation.base_reward,
+                value_points=calculation.adjusted_reward,
+                reference_price=calculation.reference_price,
+                current_price=calculation.current_price,
+                reward_unit=calculation.reward_unit,
+                uvi_transaction_id=uvi_result.metadata["transaction_id"],
+            )
 
         result = RewardExecutionResult(
             operation_id=request.operation_id,

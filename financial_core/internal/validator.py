@@ -1,6 +1,7 @@
 """Internal transfer validation."""
 
 from decimal import Decimal, InvalidOperation
+from platform_core.universal_value.unit_contract import POINT, canonicalize_unit
 
 from financial_core.internal.contracts import (
     InternalTransferDecision,
@@ -48,6 +49,12 @@ class InternalTransferValidator:
                 request.operation_id,
                 False,
                 "unit is required",
+            )
+        if canonicalize_unit(request.unit) == POINT:
+            return InternalTransferDecision(
+                request.operation_id,
+                False,
+                "POINT is an activity unit and cannot be transferred",
             )
 
         try:

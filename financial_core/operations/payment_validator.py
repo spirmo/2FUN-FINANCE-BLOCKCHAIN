@@ -1,6 +1,7 @@
 """Financial payment validation."""
 
 from decimal import Decimal, InvalidOperation
+from platform_core.universal_value.unit_contract import POINT, canonicalize_unit
 
 from financial_core.contracts.payment import (
     PaymentRequest,
@@ -48,6 +49,12 @@ class PaymentValidator:
                 operation_id=request.operation_id,
                 valid=False,
                 reason="unit is required",
+            )
+        if canonicalize_unit(request.unit) == POINT:
+            return PaymentValidationResult(
+                operation_id=request.operation_id,
+                valid=False,
+                reason="POINT is an activity unit and cannot be used for payments",
             )
 
         try:

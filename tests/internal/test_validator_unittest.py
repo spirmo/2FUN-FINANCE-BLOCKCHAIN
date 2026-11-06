@@ -17,7 +17,7 @@ class TestInternalTransferValidator(unittest.TestCase):
             source_user_id="USER-001",
             target_user_id="USER-002",
             amount="100",
-            unit="POINT",
+            unit="Drika",
         )
 
         decision = self.validator.validate(request)
@@ -31,7 +31,7 @@ class TestInternalTransferValidator(unittest.TestCase):
             source_user_id="USER-001",
             target_user_id="USER-001",
             amount="100",
-            unit="POINT",
+            unit="Drika",
         )
 
         decision = self.validator.validate(request)
@@ -48,7 +48,7 @@ class TestInternalTransferValidator(unittest.TestCase):
             source_user_id="USER-001",
             target_user_id="USER-002",
             amount="0",
-            unit="POINT",
+            unit="Drika",
         )
 
         decision = self.validator.validate(request)
@@ -65,7 +65,7 @@ class TestInternalTransferValidator(unittest.TestCase):
             source_user_id="USER-001",
             target_user_id="USER-002",
             amount="invalid",
-            unit="POINT",
+            unit="Drika",
         )
 
         decision = self.validator.validate(request)
@@ -75,6 +75,24 @@ class TestInternalTransferValidator(unittest.TestCase):
             decision.reason,
             "amount must be a valid decimal",
         )
+
+
+    def test_activity_units_are_rejected(self):
+        for unit in ("POINT", "XP"):
+            with self.subTest(unit=unit):
+                request = InternalTransferRequest(
+                    operation_id=f"INT-{unit}",
+                    source_user_id="USER-001",
+                    target_user_id="USER-002",
+                    amount="100",
+                    unit=unit,
+                )
+                decision = self.validator.validate(request)
+                self.assertFalse(decision.approved)
+                self.assertEqual(
+                    decision.reason,
+                    "POINT is an activity unit and cannot be transferred",
+                )
 
 
 if __name__ == "__main__":

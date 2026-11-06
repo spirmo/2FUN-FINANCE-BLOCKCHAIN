@@ -1,6 +1,7 @@
 """Financial transfer validation."""
 
 from decimal import Decimal, InvalidOperation
+from platform_core.universal_value.unit_contract import POINT, canonicalize_unit
 
 from financial_core.contracts.transfer import (
     TransferRequest,
@@ -66,6 +67,12 @@ class TransferValidator:
                 operation_id=request.operation_id,
                 valid=False,
                 reason="unit is required",
+            )
+        if canonicalize_unit(request.unit) == POINT:
+            return TransferValidationResult(
+                operation_id=request.operation_id,
+                valid=False,
+                reason="POINT is an activity unit and cannot be transferred",
             )
 
         return TransferValidationResult(

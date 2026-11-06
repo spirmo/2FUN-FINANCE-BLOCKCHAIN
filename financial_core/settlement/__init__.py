@@ -1,5 +1,6 @@
 """Financial settlement domain."""
 
+from financial_core.settlement.daily_coordinator import DailySettlementCoordinator
 from financial_core.settlement.contracts import (
     SettlementDecision,
     SettlementRecord,
@@ -10,6 +11,7 @@ from financial_core.settlement.gateway import BlockchainGateway
 from financial_core.settlement.validator import SettlementValidator
 
 __all__ = [
+    "DailySettlementCoordinator",
     "SettlementDecision",
     "SettlementRecord",
     "SettlementRequest",
