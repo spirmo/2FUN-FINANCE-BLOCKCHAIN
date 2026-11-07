@@ -1,6 +1,7 @@
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -29,7 +30,7 @@ class DailySettlementCoordinatorTests(unittest.TestCase):
         return sqlite3.connect(self.db, isolation_level=None, timeout=30)
 
     def _create_schema(self):
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.executescript("""
                 CREATE TABLE daily_settlement_choices (
                     user_id TEXT NOT NULL,
