@@ -1,7 +1,7 @@
 """End-to-end price-adjusted reward executor."""
 
-from datetime import date
-from decimal import Decimal
+from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
 from financial_core.profiles.daily_profile import DailyProfileStore
 
 from financial_core.contracts.idempotency import IdempotencyRecord
@@ -11,6 +11,7 @@ from financial_core.contracts.reward_execution import (
     RewardExecutionResult,
 )
 from financial_core.contracts.uvi import UVIValueRequest
+from financial_core.contracts.valuation import ValuationRequest
 from financial_core.idempotency.generic_sqlite_store import (
     GenericSQLiteIdempotencyStore,
 )
@@ -66,8 +67,6 @@ class RewardExecutor:
                 status=data["status"],
                 base_reward=Decimal(data["base_reward"]),
                 adjusted_reward=Decimal(data["adjusted_reward"]),
-                reference_price=Decimal(data["reference_price"]),
-                current_price=Decimal(data["current_price"]),
                 adjustment_factor=Decimal(data["adjustment_factor"]),
                 reward_unit=data["reward_unit"],
                 valuation_asset=data["valuation_asset"],
@@ -75,9 +74,45 @@ class RewardExecutor:
                 uvi_transaction_id=data["uvi_transaction_id"],
                 integrity_hash=data["integrity_hash"],
                 idempotent=True,
-                metadata=dict(data.get("metadata", {})),
+                metadata={"integrity_verified": False},
             )
 
+        if request.valuation_asset != "2FUNC":
+            raise ValueError("Reward valuation supports only 2FUNC")
+        if request.quote_asset != "USD":
+            raise ValueError("Reward valuation requires USD as quote asset")
+        if self._valuation_provider is None:
+            raise ValueError("A verified valuation provider is required")
+
+        valuation_timestamp = datetime.now(timezone.utc).isoformat()
+        valuation = self._valuation_provider.get_value(
+            ValuationRequest(
+                asset=request.valuation_asset,
+                quote_asset=request.quote_asset,
+                timestamp=valuation_timestamp,
+                metadata={"operation_id": request.operation_id},
+            )
+        )
+
+        if not valuation.verified:
+            raise ValueError("Valuation provider returned an unverified result")
+        if valuation.asset != request.valuation_asset:
+            raise ValueError("Valuation provider returned an unexpected asset")
+        if valuation.quote_asset != request.quote_asset:
+            raise ValueError("Valuation provider returned an unexpected quote asset")
+        if not valuation.source:
+            raise ValueError("Valuation provider returned no source")
+
+        try:
+            valuation_price = Decimal(valuation.price)
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise ValueError("Valuation provider returned an invalid price") from exc
+
+        if not valuation_price.is_finite() or valuation_price <= 0:
+            raise ValueError("Valuation provider price must be finite and positive")
+
+        # Before listing, the approved base-price policy is also the current
+        # valuation. Both calculation inputs therefore come from the provider.
         calculation = self._calculator.calculate(
             request=__import__(
                 "financial_core.contracts.reward",
@@ -85,12 +120,18 @@ class RewardExecutor:
             ).RewardCalculationRequest(
                 operation_id=request.operation_id,
                 base_reward=request.base_reward,
-                reference_price=request.reference_price,
-                current_price=request.current_price,
+                reference_price=valuation_price,
+                current_price=valuation_price,
                 reward_unit=request.reward_unit,
-                valuation_asset=request.valuation_asset,
-                quote_asset=request.quote_asset,
-                metadata=request.metadata,
+                valuation_asset=valuation.asset,
+                quote_asset=valuation.quote_asset,
+                metadata={
+                    **dict(request.metadata or {}),
+                    "valuation_source": valuation.source,
+                    "valuation_timestamp": valuation.timestamp,
+                    "valuation_verified": True,
+                    "valuation_metadata": dict(valuation.metadata or {}),
+                },
             )
         )
 
@@ -164,8 +205,6 @@ class RewardExecutor:
             status=uvi_result.status,
             base_reward=calculation.base_reward,
             adjusted_reward=calculation.adjusted_reward,
-            reference_price=calculation.reference_price,
-            current_price=calculation.current_price,
             adjustment_factor=calculation.adjustment_factor,
             reward_unit=calculation.reward_unit,
             valuation_asset=calculation.valuation_asset,
@@ -173,11 +212,7 @@ class RewardExecutor:
             uvi_transaction_id=uvi_result.metadata["transaction_id"],
             integrity_hash=integrity.hash_value,
             idempotent=False,
-            metadata={
-                **dict(calculation.metadata),
-                "valuation_verified": True,
-                "integrity_verified": False,
-            },
+            metadata={"integrity_verified": False},
         )
 
         self._idempotency_store.save(
@@ -191,8 +226,6 @@ class RewardExecutor:
                     "status": result.status,
                     "base_reward": str(result.base_reward),
                     "adjusted_reward": str(result.adjusted_reward),
-                    "reference_price": str(result.reference_price),
-                    "current_price": str(result.current_price),
                     "adjustment_factor": str(
                         result.adjustment_factor
                     ),

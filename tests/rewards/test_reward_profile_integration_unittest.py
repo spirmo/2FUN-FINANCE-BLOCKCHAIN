@@ -13,6 +13,7 @@ from financial_core.idempotency.generic_sqlite_store import (
 )
 from financial_core.profiles.daily_profile import DailyProfileStore
 from financial_core.rewards.executor import RewardExecutor
+from financial_core.valuation.twofunc_base_price_provider import TwofuncBasePriceProvider
 
 
 class FakeUVIAdapter:
@@ -44,7 +45,7 @@ class RewardProfileIntegrationTests(unittest.TestCase):
         self.uvi = FakeUVIAdapter()
 
         self.executor = RewardExecutor(
-            valuation_provider=None,
+            valuation_provider=TwofuncBasePriceProvider(),
             uvi_adapter=self.uvi,
             idempotency_store=self.idempotency,
             integrity_provider=FakeIntegrityProvider(),
@@ -60,11 +61,11 @@ class RewardProfileIntegrationTests(unittest.TestCase):
             operation_id="reward-001",
             user_id="user-001",
             base_reward=Decimal("100"),
-            reference_price=Decimal("0.01"),
-            current_price=Decimal("0.02"),
+            reference_price=Decimal("0"),
+            current_price=Decimal("0"),
             reward_unit="POINT",
             valuation_asset="2FUNC",
-            quote_asset="STABLECOIN",
+            quote_asset="USD",
             metadata={"test": True},
         )
 
@@ -72,8 +73,11 @@ class RewardProfileIntegrationTests(unittest.TestCase):
         result = self.executor.execute(self.make_request())
 
         self.assertEqual(result.status, "RECORDED")
+        self.assertFalse(hasattr(result, "reference_price"))
+        self.assertFalse(hasattr(result, "current_price"))
+        self.assertEqual(result.metadata, {"integrity_verified": False})
         self.assertEqual(result.base_reward, Decimal("100"))
-        self.assertEqual(result.adjusted_reward, Decimal("50"))
+        self.assertEqual(result.adjusted_reward, Decimal("100"))
 
         summary = self.profile.daily_summary(
             "user-001", date(2026, 10, 16)
@@ -83,12 +87,62 @@ class RewardProfileIntegrationTests(unittest.TestCase):
             Decimal(summary["daily_base_points"]), Decimal("100")
         )
         self.assertEqual(
-            Decimal(summary["daily_value_points"]), Decimal("50")
+            Decimal(summary["daily_value_points"]), Decimal("100")
         )
         self.assertEqual(
             Decimal(self.profile.lifetime_base_points("user-001")),
             Decimal("100"),
         )
+
+    def test_replay_does_not_expose_legacy_valuation_metadata(self):
+        request = self.make_request()
+
+        self.idempotency.save(
+            request.operation_id,
+            __import__(
+                "financial_core.contracts.idempotency",
+                fromlist=["IdempotencyRecord"],
+            ).IdempotencyRecord(
+                operation_id=request.operation_id,
+                operation_type="REWARD",
+                result={
+                    "operation_id": request.operation_id,
+                    "user_id": request.user_id,
+                    "status": "RECORDED",
+                    "base_reward": "100",
+                    "adjusted_reward": "100",
+                    "adjustment_factor": "1",
+                    "reward_unit": "POINT",
+                    "valuation_asset": "2FUNC",
+                    "quote_asset": "USD",
+                    "uvi_transaction_id": "legacy-uvi-tx",
+                    "integrity_hash": "legacy-hash",
+                    "reference_price": "0.000000368",
+                    "current_price": "0.000000368",
+                    "metadata": {
+                        "integrity_verified": False,
+                        "valuation_metadata": {
+                            "base_price": "0.000000368",
+                            "source": "legacy-provider",
+                        },
+                    },
+                },
+            ),
+        )
+
+        result = self.executor.execute(request)
+
+        self.assertTrue(result.idempotent)
+        self.assertEqual(
+            result.metadata,
+            {"integrity_verified": False},
+        )
+        self.assertFalse(hasattr(result, "reference_price"))
+        self.assertFalse(hasattr(result, "current_price"))
+        self.assertNotIn("valuation_metadata", result.metadata)
+        self.assertNotIn("base_price", str(result.metadata))
+        self.assertEqual(self.uvi.calls, 0)
+
 
     def test_replaying_reward_does_not_double_count(self):
         first = self.executor.execute(self.make_request())
@@ -96,6 +150,9 @@ class RewardProfileIntegrationTests(unittest.TestCase):
 
         self.assertFalse(first.idempotent)
         self.assertTrue(second.idempotent)
+        self.assertFalse(hasattr(second, "reference_price"))
+        self.assertFalse(hasattr(second, "current_price"))
+        self.assertEqual(second.metadata, {"integrity_verified": False})
         self.assertEqual(self.uvi.calls, 1)
 
         summary = self.profile.daily_summary(

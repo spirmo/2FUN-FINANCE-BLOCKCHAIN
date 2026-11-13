@@ -20,7 +20,7 @@ class RewardExecutionRequest:
     current_price: Decimal
     reward_unit: str = "POINT"
     valuation_asset: str = "2FUNC"
-    quote_asset: str = "STABLECOIN"
+    quote_asset: str = "USD"
     metadata: Mapping[str, Any] | None = None
 
 
@@ -33,8 +33,6 @@ class RewardExecutionResult:
     status: str
     base_reward: Decimal
     adjusted_reward: Decimal
-    reference_price: Decimal
-    current_price: Decimal
     adjustment_factor: Decimal
     reward_unit: str
     valuation_asset: str
